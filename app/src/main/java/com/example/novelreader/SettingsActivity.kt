@@ -22,6 +22,30 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+
+
+
+
+
+
+
+// 调试日志开关
+binding.switchDebug.isChecked = com.example.novelreader.util.DebugLogger.isEnabled(this)
+binding.switchDebug.setOnCheckedChangeListener { _, checked ->
+    com.example.novelreader.util.DebugLogger.setEnabled(this, checked)
+    com.example.novelreader.util.DebugLogger.log(this, "Debug", "调试日志 ${if (checked) "已开启" else "已关闭"}")
+}
+binding.btnOpenDebug.setOnClickListener {
+    startActivity(android.content.Intent(this, DebugActivity::class.java))
+}
+
+
+
+
+
+
+
+
         binding.rvModels.layoutManager = LinearLayoutManager(this)
         binding.btnScan.setOnClickListener { scanModels() }
 

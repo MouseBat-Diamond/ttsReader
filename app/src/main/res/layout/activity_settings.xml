@@ -72,5 +72,22 @@
                 android:layout_weight="1" android:layout_height="wrap_content" android:text="深色"/>
         </LinearLayout>
 
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+    android:text="调试" android:textStyle="bold" android:textSize="16sp"/>
+
+<Switch
+    android:id="@+id/switchDebug"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp"
+    android:text="启用调试日志" />
+
+<Button
+    android:id="@+id/btnOpenDebug"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginTop="8dp"
+    android:text="查看调试日志" />
+    
     </LinearLayout>
 </ScrollView>

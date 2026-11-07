@@ -25,6 +25,19 @@ class SherpaTtsEngine(private val context: Context) : TtsEngine {
             val config = OfflineTtsConfig(model = modelConfig)
             tts = OfflineTts(config = config)
             true
+
+
+
+
+
+
+		DebugLogger.log(context, "SherpaTts", "模型加载成功: ${model.name}")
+		true
+	    } catch (e: Exception) {
+		DebugLogger.log(context, "SherpaTts", "模型加载失败: ${e.message}")
+		false
+
+
         } catch (e: Exception) {
             e.printStackTrace()
             false

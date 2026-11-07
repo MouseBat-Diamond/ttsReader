@@ -11,17 +11,23 @@ import com.example.novelreader.databinding.ActivityMainBinding
 import com.example.novelreader.tts.SystemTtsEngine
 import com.example.novelreader.tts.TtsService
 import com.example.novelreader.util.TextLoader
+import com.example.novelreader.util.DebugLogger
+import android.widget.Toast
+
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private var currentKey: String = ""
     private var systemTts: SystemTtsEngine? = null
+    private var currentFileName: String = ""
+	private var currentText: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+	DebugLogger.log(this, "Main", "MainActivity 创建")
         binding.tvContent.movementMethod = ScrollingMovementMethod()
 
         applyReaderPrefs()
@@ -34,6 +40,23 @@ class MainActivity : AppCompatActivity() {
             startActivityForResult(intent, REQ_OPEN)
         }
         binding.btnTts.setOnClickListener {
+
+
+	    val prefs = getSharedPreferences(SettingsActivity.PREF, MODE_PRIVATE)
+	    val modelPath = prefs.getString(SettingsActivity.KEY_MODEL, null)
+	    DebugLogger.log(this, "Main", "点击朗读，模型路径=$modelPath")
+	    if (modelPath == null) {
+		DebugLogger.log(this, "Main", "走系统 TTS 分支")
+		if (systemTts == null) systemTts = SystemTtsEngine(this)
+		// ... 原有代码
+	    } else {
+		DebugLogger.log(this, "Main", "走离线引擎分支，启动 TtsService")
+		startForegroundService(Intent(this, TtsService::class.java))
+	    }
+
+
+
+	/*
             val prefs = getSharedPreferences(SettingsActivity.PREF, MODE_PRIVATE)
             val modelPath = prefs.getString(SettingsActivity.KEY_MODEL, null)
             if (modelPath == null) {
@@ -46,7 +69,32 @@ class MainActivity : AppCompatActivity() {
             } else {
                 startForegroundService(Intent(this, TtsService::class.java))
             }
+
+	    */
         }
+
+
+		binding.btnBookmark.setOnClickListener {
+		    if (currentKey.isEmpty()) {
+			Toast.makeText(this, "请先打开一个文件", Toast.LENGTH_SHORT).show()
+			return@setOnClickListener
+		    }
+		    val offset = binding.tvContent.layout?.let { layout ->
+			val line = layout.getLineForVertical(binding.tvContent.scrollY)
+			layout.getOffsetForHorizontal(line, 0f)
+		    } ?: 0
+		    val percent = if (currentText.isNotEmpty()) offset * 100f / currentText.length else 0f
+		    val intent = Intent(this, BookmarkActivity::class.java).apply {
+			putExtra("fileUri", currentKey)
+			putExtra("fileName", currentFileName)
+			putExtra("offset", offset)
+			putExtra("percent", percent)
+		    }
+		    startActivity(intent)
+		}
+
+
+
         binding.btnSettings.setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -87,6 +135,8 @@ class MainActivity : AppCompatActivity() {
         val text = TextLoader.loadText(this, uri)
         binding.tvContent.text = text
         currentKey = uri.toString()
+	    currentText = text
+	    currentFileName = uri.lastPathSegment ?: "未命名"
         val offset = ProgressStore.load(this, currentKey)
         binding.tvContent.post {
             val layout = binding.tvContent.layout ?: return@post

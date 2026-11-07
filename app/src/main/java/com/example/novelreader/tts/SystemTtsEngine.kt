@@ -4,9 +4,10 @@ import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
+import com.example.novelreader.util.DebugLogger
 
 class SystemTtsEngine(
-    context: Context,
+    private val context: Context,
     private val onDone: (() -> Unit)? = null
 ) : TtsEngine, TextToSpeech.OnInitListener {
 
@@ -20,6 +21,21 @@ class SystemTtsEngine(
     }
 
     override fun onInit(status: Int) {
+
+
+
+    DebugLogger.log(context, "SystemTts", "onInit status=$status")
+    if (status == TextToSpeech.SUCCESS) {
+        ready = true
+        // ... 原有代码不动
+        DebugLogger.log(context, "SystemTts", "TTS 初始化成功")
+    } else {
+        DebugLogger.log(context, "SystemTts", "TTS 初始化失败，设备可能没有可用引擎")
+    }
+
+
+
+
         if (status == TextToSpeech.SUCCESS) {
             ready = true
             tts?.language = Locale.CHINA
