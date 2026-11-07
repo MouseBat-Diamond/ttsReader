@@ -1,0 +1,127 @@
+package com.example.novelreader
+
+import android.content.Intent
+import android.graphics.Color
+import android.graphics.Typeface
+import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
+import androidx.appcompat.app.AppCompatActivity
+import com.example.novelreader.data.ProgressStore
+import com.example.novelreader.databinding.ActivityMainBinding
+import com.example.novelreader.tts.SystemTtsEngine
+import com.example.novelreader.tts.TtsService
+import com.example.novelreader.util.TextLoader
+
+class MainActivity : AppCompatActivity() {
+
+    private lateinit var binding: ActivityMainBinding
+    private var currentKey: String = ""
+    private var systemTts: SystemTtsEngine? = null
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+        binding.tvContent.movementMethod = ScrollingMovementMethod()
+
+        applyReaderPrefs()
+
+        binding.btnOpen.setOnClickListener {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "text/plain"
+            }
+            startActivityForResult(intent, REQ_OPEN)
+        }
+        binding.btnTts.setOnClickListener {
+            val prefs = getSharedPreferences(SettingsActivity.PREF, MODE_PRIVATE)
+            val modelPath = prefs.getString(SettingsActivity.KEY_MODEL, null)
+            if (modelPath == null) {
+                // 兜底：系统 TTS 读当前段落
+                if (systemTts == null) systemTts = SystemTtsEngine(this)
+                val start = binding.tvContent.selectionStart.coerceAtLeast(0)
+                val text = binding.tvContent.text.toString()
+                val end = (text.indexOf('。', start).takeIf { it > 0 } ?: text.length)
+                systemTts?.speak(text.substring(start, end + 1), 1.0f)
+            } else {
+                startForegroundService(Intent(this, TtsService::class.java))
+            }
+        }
+        binding.btnSettings.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
+        binding.btnHelp.setOnClickListener {
+            startActivity(Intent(this, HelpActivity::class.java))
+        }
+
+        handleIntent(intent)
+    }
+
+    private fun applyReaderPrefs() {
+        val prefs = getSharedPreferences(SettingsActivity.PREF, MODE_PRIVATE)
+        binding.tvContent.textSize = prefs.getInt(SettingsActivity.KEY_FONT, 18).toFloat()
+        val family = when (prefs.getInt(SettingsActivity.KEY_FAMILY, 0)) {
+            1 -> Typeface.SERIF
+            2 -> Typeface.MONOSPACE
+            else -> Typeface.SANS_SERIF
+        }
+        binding.tvContent.typeface = Typeface.create(family, Typeface.NORMAL)
+        val bg = prefs.getInt(SettingsActivity.KEY_BG, Color.WHITE)
+        binding.tvContent.setBackgroundColor(bg)
+        binding.tvContent.setTextColor(
+            if (bg == Color.parseColor("#303030")) Color.WHITE else Color.BLACK
+        )
+    }
+
+    override fun onNewIntent(intent: Intent?) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent?) {
+        intent ?: return
+        if (intent.action == Intent.ACTION_VIEW) intent.data?.let { loadUri(it) }
+    }
+
+    private fun loadUri(uri: android.net.Uri) {
+        val text = TextLoader.loadText(this, uri)
+        binding.tvContent.text = text
+        currentKey = uri.toString()
+        val offset = ProgressStore.load(this, currentKey)
+        binding.tvContent.post {
+            val layout = binding.tvContent.layout ?: return@post
+            val line = layout.getLineForOffset(offset.coerceIn(0, text.length))
+            binding.tvContent.scrollTo(0, layout.getLineTop(line))
+        }
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode == REQ_OPEN && resultCode == RESULT_OK) {
+            data?.data?.let {
+                contentResolver.takePersistableUriPermission(it, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                loadUri(it)
+            }
+        }
+    }
+
+    override fun onPause() {
+        super.onPause()
+        if (currentKey.isNotEmpty()) {
+            val offset = binding.tvContent.layout?.let { layout ->
+                val line = layout.getLineForVertical(binding.tvContent.scrollY)
+                layout.getOffsetForHorizontal(line, 0f)
+            } ?: 0
+            ProgressStore.save(this, currentKey, offset)
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        systemTts?.release()
+    }
+
+    companion object {
+        private const val REQ_OPEN = 1001
+    }
+}
