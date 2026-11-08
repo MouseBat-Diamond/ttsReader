@@ -1,7 +1,7 @@
 package com.example.novelreader
 
+import android.content.SharedPreferences
 import android.graphics.Color
-import android.graphics.Typeface
 import android.os.Bundle
 import android.widget.SeekBar
 import android.widget.Toast
@@ -15,36 +15,25 @@ import com.example.novelreader.tts.TtsModelScanner
 class SettingsActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivitySettingsBinding
+    private lateinit var prefs: SharedPreferences
     private var selected: TtsModel? = null
+    private var scannedModels: List<TtsModel> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        prefs = getSharedPreferences(PREF, MODE_PRIVATE)
 
-
-
-
-
-
-
-
-// 调试日志开关
-binding.switchDebug.isChecked = com.example.novelreader.util.DebugLogger.isEnabled(this)
-binding.switchDebug.setOnCheckedChangeListener { _, checked ->
-    com.example.novelreader.util.DebugLogger.setEnabled(this, checked)
-    com.example.novelreader.util.DebugLogger.log(this, "Debug", "调试日志 ${if (checked) "已开启" else "已关闭"}")
-}
-binding.btnOpenDebug.setOnClickListener {
-    startActivity(android.content.Intent(this, DebugActivity::class.java))
-}
-
-
-
-
-
-
-
+        // 调试日志开关
+        binding.switchDebug.isChecked = com.example.novelreader.util.DebugLogger.isEnabled(this)
+        binding.switchDebug.setOnCheckedChangeListener { _, checked ->
+            com.example.novelreader.util.DebugLogger.setEnabled(this, checked)
+            com.example.novelreader.util.DebugLogger.log(this, "Debug", "调试日志 ${if (checked) "已开启" else "已关闭"}")
+        }
+        binding.btnOpenDebug.setOnClickListener {
+            startActivity(android.content.Intent(this, DebugActivity::class.java))
+        }
 
         binding.rvModels.layoutManager = LinearLayoutManager(this)
         binding.btnScan.setOnClickListener { scanModels() }
@@ -73,7 +62,6 @@ binding.btnOpenDebug.setOnClickListener {
         binding.seekFont.progress = loadInt(KEY_FONT, 18) - 12
 
         // 字体选择
-        val families = listOf("默认", "衬线", "等宽")
         binding.rgFont.setOnCheckedChangeListener { _, checkedId ->
             val idx = when (checkedId) {
                 R.id.rbFontSerif -> 1
@@ -94,52 +82,50 @@ binding.btnOpenDebug.setOnClickListener {
         binding.btnBgGreen.setOnClickListener { saveInt(KEY_BG, Color.parseColor("#CCE8CF")) }
         binding.btnBgDark.setOnClickListener { saveInt(KEY_BG, Color.parseColor("#303030")) }
 
+        // 初始化当前 TTS 选择（无模型时默认系统 TTS）
+        loadCurrentTtsSelection()
+
         scanModels()
     }
 
     private fun scanModels() {
-        val models = TtsModelScanner.scan()
-        if (models.isEmpty()) {
+        scannedModels = TtsModelScanner.scan()
+        if (scannedModels.isEmpty()) {
             Toast.makeText(this, "未找到离线模型，将使用系统 TTS", Toast.LENGTH_LONG).show()
         }
-        binding.rvModels.adapter = ModelAdapter(models) { model ->
+        binding.rvModels.adapter = ModelAdapter(scannedModels) { model ->
             selected = model
             saveString(KEY_MODEL, model.dir.absolutePath)
+            saveString(KEY_TTS_ENGINE, model.name)
             Toast.makeText(this, "已选择: ${model.name}", Toast.LENGTH_SHORT).show()
+        }
+        loadCurrentTtsSelection()
+    }
+
+    private fun buildTtsOptions(): List<Pair<String, String>> {
+        val options = mutableListOf("system" to "系统 TTS")
+        options.addAll(scannedModels.map { it.name to it.name })
+        return options
+    }
+
+    private fun loadCurrentTtsSelection(): String {
+        val saved = prefs.getString(KEY_TTS_ENGINE, null)
+        val options = buildTtsOptions()
+        return if (saved.isNullOrBlank() || options.none { it.first == saved }) {
+            prefs.edit().putString(KEY_TTS_ENGINE, "system").apply()
+            "system"
+        } else {
+            saved
         }
     }
 
-
-
-private fun buildTtsOptions(): List<TtsOption> {
-    val options = mutableListOf(TtsOption(id = "system", name = "系统 TTS"))
-    options.addAll(scannedModels.map { TtsOption(id = it.name, name = it.name) })
-    return options
-}
-
-private fun loadCurrentTtsSelection(): String {
-    val saved = prefs.getString("tts_engine", null)
-    val options = buildTtsOptions()
-    return if (saved.isNullOrBlank() || options.none { it.id == saved }) {
-        prefs.edit().putString("tts_engine", "system").apply()
-        "system"
-    } else saved
-}
-
-
-
-
-
-
-    
     private fun saveInt(key: String, value: Int) =
-        getSharedPreferences(PREF, MODE_PRIVATE).edit().putInt(key, value).apply()
+        prefs.edit().putInt(key, value).apply()
 
-    private fun loadInt(key: String, def: Int) =
-        getSharedPreferences(PREF, MODE_PRIVATE).getInt(key, def)
+    private fun loadInt(key: String, def: Int) = prefs.getInt(key, def)
 
     private fun saveString(key: String, value: String) =
-        getSharedPreferences(PREF, MODE_PRIVATE).edit().putString(key, value).apply()
+        prefs.edit().putString(key, value).apply()
 
     private class ModelAdapter(
         private val items: List<TtsModel>,
@@ -172,5 +158,6 @@ private fun loadCurrentTtsSelection(): String {
         const val KEY_FAMILY = "font_family"
         const val KEY_BG = "bg_color"
         const val KEY_MODEL = "tts_model_path"
+        const val KEY_TTS_ENGINE = "tts_engine"
     }
 }
