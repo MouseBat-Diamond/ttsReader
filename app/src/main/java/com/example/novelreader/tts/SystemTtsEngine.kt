@@ -2,72 +2,24 @@ package com.example.novelreader.tts
 
 import android.content.Context
 import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
-import com.example.novelreader.util.DebugLogger
 
-class SystemTtsEngine(
-    private val context: Context,
-    private val onDone: (() -> Unit)? = null
-) : TtsEngine, TextToSpeech.OnInitListener {
-
-    private var tts: TextToSpeech? = null
+class SystemTtsEngine(context: Context) : TextToSpeech.OnInitListener {
+    private var tts: TextToSpeech? = TextToSpeech(context, this)
     private var ready = false
-    private var pendingText: String? = null
-    private var pendingSpeed = 1.0f
-
-    init {
-        tts = TextToSpeech(context.applicationContext, this)
-    }
 
     override fun onInit(status: Int) {
-
-
-
-    DebugLogger.log(context, "SystemTts", "onInit status=$status")
-    if (status == TextToSpeech.SUCCESS) {
-        ready = true
-        // ... 原有代码不动
-        DebugLogger.log(context, "SystemTts", "TTS 初始化成功")
-    } else {
-        DebugLogger.log(context, "SystemTts", "TTS 初始化失败，设备可能没有可用引擎")
-    }
-
-
-
-
         if (status == TextToSpeech.SUCCESS) {
+            tts?.language = Locale.getDefault()
             ready = true
-            tts?.language = Locale.CHINA
-            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {}
-                override fun onDone(utteranceId: String?) { onDone?.invoke() }
-                @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) {}
-            })
-            pendingText?.let { speak(it, pendingSpeed) }
-            pendingText = null
         }
     }
 
-    override fun speak(text: String, speed: Float) {
-        val engine = tts ?: return
-        if (!ready) {
-            pendingText = text
-            pendingSpeed = speed
-            return
-        }
-        engine.setSpeechRate(speed.coerceIn(0.1f, 2.0f))
-        engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, "utt_${System.currentTimeMillis()}")
+    fun speak(text: String) {
+        if (ready) tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "utt")
     }
 
-    override fun stop() {
-        tts?.stop()
-    }
+    fun stop() { tts?.stop() }
 
-    override fun release() {
-        tts?.shutdown()
-        tts = null
-        ready = false
-    }
+    fun release() { tts?.shutdown(); tts = null }
 }
