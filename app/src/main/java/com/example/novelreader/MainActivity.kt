@@ -56,6 +56,31 @@ class MainActivity : AppCompatActivity() {
 
 
 
+
+
+
+
+
+val engineId = prefs.getString("tts_engine", "system") ?: "system"
+if (engineId == "system") {
+    systemTts.speak(text, TextToSpeech.QUEUE_FLUSH, null, null)
+} else {
+    val model = findModelByName(engineId)
+    if (model == null) {
+        Log.e("TTS", "模型不存在: $engineId")
+        return
+    }
+    val ok = sherpaTtsEngine.load(model)
+    if (ok) sherpaTtsEngine.speak(text, speed)
+    else Log.e("TTS", "模型加载失败")
+}
+
+
+
+
+
+
+
 	/*
             val prefs = getSharedPreferences(SettingsActivity.PREF, MODE_PRIVATE)
             val modelPath = prefs.getString(SettingsActivity.KEY_MODEL, null)
