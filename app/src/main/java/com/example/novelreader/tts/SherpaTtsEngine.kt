@@ -5,6 +5,7 @@ import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
+import com.example.novelreader.util.DebugLogger
 
 class SherpaTtsEngine(private val context: Context) : TtsEngine {
 
