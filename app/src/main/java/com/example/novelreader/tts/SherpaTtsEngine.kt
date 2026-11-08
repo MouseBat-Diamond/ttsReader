@@ -5,45 +5,44 @@ import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
-import com.example.novelreader.util.DebugLogger
+//import com.example.novelreader.util.DebugLogger
+import android.util.Log
 
 class SherpaTtsEngine(private val context: Context) : TtsEngine {
 
     private var tts: OfflineTts? = null
 
-    fun load(model: TtsModel): Boolean {
-        release()
-        return try {
-            val modelDir = model.dir.absolutePath
-            val vits = OfflineTtsVitsModelConfig(
-                model = model.modelFile.absolutePath,
-                lexicon = "$modelDir/lexicon.txt",
-                tokens = "$modelDir/tokens.txt",
-                dataDir = modelDir,
-                dictDir = modelDir
-            )
-            val modelConfig = OfflineTtsModelConfig(vits = vits, numThreads = 2)
-            val config = OfflineTtsConfig(model = modelConfig)
-            tts = OfflineTts(config = config)
-            true
 
 
 
-
-
-
-		DebugLogger.log(context, "SherpaTts", "模型加载成功: ${model.name}")
-		true
-	    } catch (e: Exception) {
-		DebugLogger.log(context, "SherpaTts", "模型加载失败: ${e.message}")
-		false
-
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
+fun load(model: TtsModel): Boolean {
+    release()
+    return try {
+        val modelDir = model.dir.absolutePath
+        val vits = OfflineTtsVitsModelConfig(
+            model = model.modelFile.absolutePath,
+            lexicon = "$modelDir/lexicon.txt",
+            tokens = "$modelDir/tokens.txt",
+            dataDir = modelDir,
+            dictDir = modelDir
+        )
+        val modelConfig = OfflineTtsModelConfig(vits = vits, numThreads = 2)
+        val config = OfflineTtsConfig(model = modelConfig)
+        tts = OfflineTts(config = config)
+        Log.d("SherpaTts", "模型加载成功: ${model.name}")
+        true
+    } catch (e: Exception) {
+        Log.d("SherpaTts", "模型加载失败: ${e.message}")
+        false
     }
+}
+
+
+
+
+
+
+
 
     override fun speak(text: String, speed: Float) {
         val engine = tts ?: return
