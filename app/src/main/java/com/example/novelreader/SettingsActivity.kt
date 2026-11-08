@@ -109,6 +109,29 @@ binding.btnOpenDebug.setOnClickListener {
         }
     }
 
+
+
+private fun buildTtsOptions(): List<TtsOption> {
+    val options = mutableListOf(TtsOption(id = "system", name = "系统 TTS"))
+    options.addAll(scannedModels.map { TtsOption(id = it.name, name = it.name) })
+    return options
+}
+
+private fun loadCurrentTtsSelection(): String {
+    val saved = prefs.getString("tts_engine", null)
+    val options = buildTtsOptions()
+    return if (saved.isNullOrBlank() || options.none { it.id == saved }) {
+        prefs.edit().putString("tts_engine", "system").apply()
+        "system"
+    } else saved
+}
+
+
+
+
+
+
+    
     private fun saveInt(key: String, value: Int) =
         getSharedPreferences(PREF, MODE_PRIVATE).edit().putInt(key, value).apply()
 
