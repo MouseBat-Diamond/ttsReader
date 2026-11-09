@@ -82,42 +82,74 @@ class SettingsActivity : AppCompatActivity() {
         binding.btnBgGreen.setOnClickListener { saveInt(KEY_BG, Color.parseColor("#CCE8CF")) }
         binding.btnBgDark.setOnClickListener { saveInt(KEY_BG, Color.parseColor("#303030")) }
 
+
+
+
+
+// TTS 引擎选择
+val currentEngine = loadCurrentTtsSelection()
+binding.rgTtsEngine.setOnCheckedChangeListener { _, checkedId ->
+    val engine = when (checkedId) {
+        R.id.rbEngineOffline -> "offline"
+        else -> "system"
+    }
+    prefs.edit().putString(KEY_TTS_ENGINE, engine).apply()
+    DebugLogger.log(this, "Settings", "TTS 引擎切换为: $engine")
+    // 切到系统 TTS 时清掉模型路径，避免 MainActivity 误判
+    if (engine == "system") {
+        prefs.edit().remove(KEY_MODEL).apply()
+    }
+    updateModelListVisibility(engine)
+}
+when (currentEngine) {
+    "offline" -> binding.rbEngineOffline.isChecked = true
+    else -> binding.rbEngineSystem.isChecked = true
+}
+updateModelListVisibility(currentEngine)
+
+
+
+
         // 初始化当前 TTS 选择（无模型时默认系统 TTS）
         loadCurrentTtsSelection()
 
         scanModels()
     }
 
-    private fun scanModels() {
-        scannedModels = TtsModelScanner.scan()
-        if (scannedModels.isEmpty()) {
-            Toast.makeText(this, "未找到离线模型，将使用系统 TTS", Toast.LENGTH_LONG).show()
-        }
-        binding.rvModels.adapter = ModelAdapter(scannedModels) { model ->
-            selected = model
-            saveString(KEY_MODEL, model.dir.absolutePath)
-            saveString(KEY_TTS_ENGINE, model.name)
-            Toast.makeText(this, "已选择: ${model.name}", Toast.LENGTH_SHORT).show()
-        }
-        loadCurrentTtsSelection()
-    }
 
-    private fun buildTtsOptions(): List<Pair<String, String>> {
-        val options = mutableListOf("system" to "系统 TTS")
-        options.addAll(scannedModels.map { it.name to it.name })
-        return options
-    }
 
-    private fun loadCurrentTtsSelection(): String {
-        val saved = prefs.getString(KEY_TTS_ENGINE, null)
-        val options = buildTtsOptions()
-        return if (saved.isNullOrBlank() || options.none { it.first == saved }) {
-            prefs.edit().putString(KEY_TTS_ENGINE, "system").apply()
-            "system"
-        } else {
-            saved
-        }
+private fun updateModelListVisibility(engine: String) {
+    val visible = engine == "offline"
+    binding.rvModels.visibility = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+    binding.btnScan.visibility = if (visible) android.view.View.VISIBLE else android.view.View.GONE
+}
+
+
+private fun scanModels() {
+    scannedModels = TtsModelScanner.scan()
+    if (scannedModels.isEmpty()) {
+        Toast.makeText(this, "未找到离线模型，将使用系统 TTS", Toast.LENGTH_LONG).show()
     }
+    binding.rvModels.adapter = ModelAdapter(scannedModels) { model ->
+        selected = model
+        saveString(KEY_MODEL, model.dir.absolutePath)
+        saveString(KEY_TTS_ENGINE, "offline")
+        Toast.makeText(this, "已选择: ${model.name}", Toast.LENGTH_SHORT).show()
+    }
+    updateModelListVisibility(loadCurrentTtsSelection())
+}
+
+
+
+
+
+private fun loadCurrentTtsSelection(): String {
+    val saved = prefs.getString(KEY_TTS_ENGINE, null)
+    return if (saved == "offline" || saved == "system") saved else {
+        prefs.edit().putString(KEY_TTS_ENGINE, "system").apply()
+        "system"
+    }
+}
 
     private fun saveInt(key: String, value: Int) =
         prefs.edit().putInt(key, value).apply()

@@ -11,7 +11,6 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.novelreader.data.ProgressStore
 import com.example.novelreader.databinding.ActivityMainBinding
 import com.example.novelreader.tts.SystemTtsEngine
-import com.example.novelreader.tts.TtsModelScanner
 import com.example.novelreader.tts.TtsService
 import com.example.novelreader.util.DebugLogger
 import com.example.novelreader.util.TextLoader
@@ -41,28 +40,39 @@ class MainActivity : AppCompatActivity() {
             startActivityForResult(intent, REQ_OPEN)
         }
 
-        binding.btnTts.setOnClickListener {
-            val prefs = getSharedPreferences(SettingsActivity.PREF, MODE_PRIVATE)
-            val modelPath = prefs.getString(SettingsActivity.KEY_MODEL, null)
-            DebugLogger.log(this, "Main", "点击朗读，模型路径=$modelPath")
 
-            if (modelPath.isNullOrBlank()) {
-                // 系统 TTS：读当前段落
-                DebugLogger.log(this, "Main", "走系统 TTS 分支")
-                if (systemTts == null) systemTts = SystemTtsEngine(this)
-                val text = binding.tvContent.text.toString()
-                if (text.isBlank()) {
-                    Toast.makeText(this, "没有可朗读的内容", Toast.LENGTH_SHORT).show()
-                    return@setOnClickListener
-                }
-                val start = binding.tvContent.selectionStart.coerceAtLeast(0)
-                val end = text.indexOf('。', start).takeIf { it > 0 } ?: text.length
-                systemTts?.speak(text.substring(start, end + 1), 1.0f)
-            } else {
-                DebugLogger.log(this, "Main", "走离线引擎分支，启动 TtsService")
-                startForegroundService(Intent(this, TtsService::class.java))
-            }
+
+
+binding.btnTts.setOnClickListener {
+    val prefs = getSharedPreferences(SettingsActivity.PREF, MODE_PRIVATE)
+    val engine = prefs.getString(SettingsActivity.KEY_TTS_ENGINE, "system")
+    DebugLogger.log(this, "Main", "点击朗读，当前引擎=$engine")
+
+    if (engine == "offline") {
+        DebugLogger.log(this, "Main", "走离线引擎分支，启动 TtsService")
+        startForegroundService(Intent(this, TtsService::class.java))
+    } else {
+        DebugLogger.log(this, "Main", "走系统 TTS 分支")
+        if (systemTts == null) systemTts = SystemTtsEngine(this)
+        val text = binding.tvContent.text.toString()
+        if (text.isBlank()) {
+            Toast.makeText(this, "没有可朗读的内容", Toast.LENGTH_SHORT).show()
+            return@setOnClickListener
         }
+        val start = binding.tvContent.selectionStart.coerceAtLeast(0)
+        val end = text.indexOf('。', start).takeIf { it > 0 } ?: text.length
+    val rateDegree = prefs.getInt(SettingsActivity.KEY_RATE, 63) + 1
+    val speed = 0.5f + rateDegree / 128f * 1.5f
+    systemTts?.speak(text.substring(start, end + 1), speed)
+    }
+}
+
+
+
+
+
+
+
 
         binding.btnBookmark.setOnClickListener {
             if (currentKey.isEmpty()) {
