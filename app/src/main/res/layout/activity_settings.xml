@@ -9,6 +9,35 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+
+<TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
+    android:text="TTS 引擎" android:textStyle="bold" android:textSize="16sp"/>
+
+<RadioGroup
+    android:id="@+id/rgTtsEngine"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:layout_marginTop="8dp">
+
+    <RadioButton
+        android:id="@+id/rbEngineSystem"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="系统 TTS（默认）" />
+
+    <RadioButton
+        android:id="@+id/rbEngineOffline"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="内置离线引擎（sherpa-onnx）" />
+</RadioGroup>
+
+<View android:layout_width="match_parent" android:layout_height="1dp"
+    android:background="#DDD" android:layout_marginVertical="16dp"/>
+
+
+
         <TextView android:layout_width="wrap_content" android:layout_height="wrap_content"
             android:text="可用 TTS 模型（扫描目录）" android:textStyle="bold" android:textSize="16sp"/>
 
