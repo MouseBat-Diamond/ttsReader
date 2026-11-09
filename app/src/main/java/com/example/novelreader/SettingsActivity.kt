@@ -11,6 +11,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.example.novelreader.databinding.ActivitySettingsBinding
 import com.example.novelreader.tts.TtsModel
 import com.example.novelreader.tts.TtsModelScanner
+import com.example.novelreader.util.DebugLogger
 
 class SettingsActivity : AppCompatActivity() {
 
