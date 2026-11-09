@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 val start = binding.tvContent.selectionStart.coerceAtLeast(0)
                 val end = text.indexOf('。', start).takeIf { it > 0 } ?: text.length
-                systemTts?.speak(text.substring(start, end + 1))
+                systemTts?.speak(text.substring(start, end + 1), 1.0f)
             } else {
                 DebugLogger.log(this, "Main", "走离线引擎分支，启动 TtsService")
                 startForegroundService(Intent(this, TtsService::class.java))
